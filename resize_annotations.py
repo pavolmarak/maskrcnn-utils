@@ -28,7 +28,7 @@ with open('annotations.json') as json_file:
         polygon = Polygon(points)
        
         # bbox
-        new_bbox = [polygon.bounds[0], polygon.bounds[3], polygon.bounds[2] - polygon.bounds[0], polygon.bounds[3] - polygon.bounds[1]]
+        new_bbox = [polygon.bounds[0], polygon.bounds[3]-(polygon.bounds[3] - polygon.bounds[1), polygon.bounds[2] - polygon.bounds[0], polygon.bounds[3] - polygon.bounds[1]]
         for i in range(len(ann['bbox'])):
             ann['bbox'][i] = new_bbox[i]
             print(ann['bbox'][i])
