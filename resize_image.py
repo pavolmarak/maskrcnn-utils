@@ -2,15 +2,15 @@
 from PIL import Image
 import os, sys
 
-path = "./"
-dirs = os.listdir( path )
+img_path = sys.argv[1]
+new_width = int(sys.argv[2])
+new_height = int(sys.argv[3])
 
-def resize():
-    for item in dirs:
-        if item.endswith('JPG') is True:
-            im = Image.open(path+item)
-            f, e = os.path.splitext(path+item)
-            imResize = im.resize((667,1000), Image.ANTIALIAS)
-            imResize.save(f + '_resized.jpg', 'JPEG', quality=100)
+def resize(img_path):
+        if img_path.endswith('jpg') is True:
+            im = Image.open(img_path)
+            f, e = os.path.splitext(img_path)
+            imResize = im.resize((new_width,new_height), Image.ANTIALIAS)
+            imResize.save(f + '_resized.jpg', 'JPEG', quality=95)
 
-resize()
+resize(img_path)
