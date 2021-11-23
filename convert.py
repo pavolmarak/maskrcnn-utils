@@ -17,6 +17,11 @@ with open(ann_file) as json_file:
     for img in data['images']:
         imgs[img['id']] = Image.open(img['file_name'])
     data['images'].clear()
+    
+    # delete category ID=0 which is reserved for background
+    for cat in data['categories']:
+        if cat['id'] == 0:
+            data['categories'].remove(cat)
     cnts = {
         1: 0,
         2: 0,
