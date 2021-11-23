@@ -60,7 +60,7 @@ with open(ann_file) as json_file:
                     seg[i] = seg[i] - ann['bbox'][1]
                 counter = counter + 1
 
-        ann['bbox'] = [0, height, width, height]
+        ann['bbox'] = [0, 0, width, height]
 
         cnts[ann['category_id']] = cnts[ann['category_id']] + 1
         ann_id = ann_id + 1
