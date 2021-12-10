@@ -16,6 +16,7 @@ if os.listdir(destination_folder):
 
 def make_crops(data, destination_folder, block_w, block_h):
     images = []
+    crop_counter = 0
     for img in data['images']:
         img_crops = {}
         curr_img = Image.open(img['file_name'])
@@ -26,25 +27,39 @@ def make_crops(data, destination_folder, block_w, block_h):
         for w in range(0, curr_img.width, block_w):
             for h in range(0, curr_img.height, block_h):
                 img_crops['crops'].append({
+                    'id': crop_counter,
                     'img_data': curr_img.crop([w, h, w + block_w, h + block_h]),
                     'left': w,
                     'top': h,
                     'width': block_w,
                     'height': block_h,
-                    'crop_name': destination_folder + '/' + img_crops['path'].split('/')[-1] + '_col' + str(w) + '_row' + str(h) + '.jpg'
+                    'crop_name': destination_folder + '/' + img_crops['path'].split('/')[-1] + '_col' + str(
+                        w) + '_row' + str(h) + '.jpg'
                 })
                 img_crops['crops'][-1]['img_data'].save(img_crops['crops'][-1]['crop_name'])
+                crop_counter = crop_counter + 1
 
         images.append(img_crops)
     return images
 
 
-def set_images_field(data, images):
-    data['images'].clear()
-    cnt = 0
+# checks if an image crop contains annotations
+def has_annotations(data_json, crop):
+    for ann in data_json['annotations']:
+        if ann['image_id'] == crop['id']:
+            return True
+    return False
+
+
+def update_images_json(data_json, images):
+    data_json['images'].clear()
     for img in images:
         for crop in img['crops']:
-            data['images'].append(
+            if has_annotations(data_json, crop) is False:
+                os.remove(crop['crop_name'])
+                continue
+
+            data_json['images'].append(
                 {
                     'license': 0,
                     'url': None,
@@ -52,11 +67,10 @@ def set_images_field(data, images):
                     'height': block_h,
                     'width': block_w,
                     'date_captured': None,
-                    'id': cnt
+                    'id': crop['id']
                 }
             )
-            cnt = cnt + 1
-    return data
+    return data_json
 
 
 def is_bbox_in_crop(bbox, crop):
@@ -79,44 +93,44 @@ def get_annotations_in_crop(data, crop, orig_image_id):
     return anns
 
 
-def transform_annotations(data, images):
+def update_annotations_json(data_json, images):
     annotations = []
     anns_in_crop = []
-    crop_counter = 0
     for img in images:
         for crop in img['crops']:
-            anns_in_crop = get_annotations_in_crop(data, crop, img['id'])
+            anns_in_crop = get_annotations_in_crop(data_json, crop, img['id'])
             for ann in range(len(anns_in_crop)):
                 # transform image_id
-                anns_in_crop[ann]['image_id'] = crop_counter
+                anns_in_crop[ann]['image_id'] = crop['id']
                 # transform segmentation
                 for polygon in range(len(anns_in_crop[ann]['segmentation'])):
                     for i in range(len(anns_in_crop[ann]['segmentation'][polygon])):
                         if i % 2 == 0:
-                            anns_in_crop[ann]['segmentation'][polygon][i] = anns_in_crop[ann]['segmentation'][polygon][i] - crop['left']
+                            anns_in_crop[ann]['segmentation'][polygon][i] = anns_in_crop[ann]['segmentation'][polygon][
+                                                                                i] - crop['left']
                         else:
-                            anns_in_crop[ann]['segmentation'][polygon][i] = anns_in_crop[ann]['segmentation'][polygon][i] - crop['top']
+                            anns_in_crop[ann]['segmentation'][polygon][i] = anns_in_crop[ann]['segmentation'][polygon][
+                                                                                i] - crop['top']
                 # transform bbox
                 anns_in_crop[ann]['bbox'][0] = anns_in_crop[ann]['bbox'][0] - crop['left']
                 anns_in_crop[ann]['bbox'][1] = anns_in_crop[ann]['bbox'][1] - crop['top']
 
             annotations = annotations + anns_in_crop
-            crop_counter = crop_counter + 1
-    data['annotations'] = annotations
-    return data
+    data_json['annotations'] = annotations
+    return data_json
 
 
 with open(ann_file) as json_file:
-    data = json.load(json_file)
+    data_json = json.load(json_file)
 
-    # make crops
-    images = make_crops(data, destination_folder, block_w, block_h)
+    # make image crops
+    images = make_crops(data_json, destination_folder, block_w, block_h)
 
-    # transform annotations
-    data = transform_annotations(data, images)
+    # update annotations in JSON
+    data_json = update_annotations_json(data_json, images)
 
-    # set images field
-    data = set_images_field(data, images)
+    # update images in JSON
+    data_json = update_images_json(data_json, images)
 
     with open('annotations-new.json', 'w') as outfile:
-        json.dump(data, outfile)
+        json.dump(data_json, outfile)
