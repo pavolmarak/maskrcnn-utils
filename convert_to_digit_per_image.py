@@ -1,3 +1,5 @@
+# script for transforming dataset (JSON + images) to digit-per-image representation
+
 import sys
 import os
 import json
